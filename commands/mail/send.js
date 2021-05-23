@@ -16,7 +16,9 @@ module.exports = {
 
         let supportreason = args.slice(2).join(" ");
 
-        const user = message.mentions.users.first();
+        //const user = message.mentions.users.first();
+
+        const IDuser = await client.users.fetch(args[0]);
 
         const permsembed = new MessageEmbed()
             .setTitle('No Permissions!')
@@ -25,7 +27,7 @@ module.exports = {
 
         if (!message.member.hasPermission('KICK_MEMBERS')) return message.channel.send(permsembed);
 
-        if (!user) return message.channel.send('User not found!');
+        //if (!user) return message.channel.send('User not found!');
 
         //if (!ticketcheck.has(user.id)) return message.channel.send('Error');
 
@@ -46,7 +48,7 @@ module.exports = {
             .setColor('GREEN')
 
 
-        user.send(supportembed).catch(() => {
+        IDuser.send(supportembed).catch(() => {
             return message.channel.send('Message was not sent! The person may not share a server with the bot or has DMs disabled! ', message.react('❌'));
         })
 

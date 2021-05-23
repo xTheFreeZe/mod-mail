@@ -98,6 +98,7 @@ client.on('message', async message => {
 
                 let ticketmodchannel = client.channels.cache.get('830512828396863538');
 
+
                 let consolechannel = client.channels.cache.get('832530885336498216');
 
 
@@ -261,9 +262,58 @@ client.on('message', async message => {
     switch (args[0]) {
         case "send":
 
+
+            if (!message.guild) return message.channel.send('This is only available in a Server! Not in DMs');
+
+            if (!args[1]) return message.channel.send('Please provide an ID you want to send the message to.');
+
+
+
+            let content = [
+                "**Error**",
+                " ",
+                "Make sure that : ",
+                " ",
+                "> Your ID is long enough ( 18 Numbers), ",
+                " ",
+                "> Your ID only contains Numbers,",
+                " ",
+                "> Your ID actually exists"
+            ]
+
+            let IDuser;
+
+            try {
+
+                IDuser = await client.users.fetch(args[1])
+
+            } catch (e) {
+
+                return message.channel.send(content);
+
+                //message.channel.send('>' + " " + e);
+
+            }
+
+            const user = IDuser
+
+            if (!user) return console.log('error');
+
+            if (!ticketcheck.has(user.id)) {
+
+                return message.channel.send('This Member does not have an open ticket!');
+
+            }
+
             let supportreason = args.slice(2).join(" ");
 
-            const user = message.mentions.users.first();
+
+
+            /*
+            const IDuser = await client.users.fetch(args[1]).catch((e) => { 
+                return message.channel.send('Please provide an ID you want to send your message to! You can find the ID in the `New Ticket` message!');
+            })
+            */
 
             const permsembed = new MessageEmbed()
                 .setTitle('No Permissions!')
@@ -272,21 +322,14 @@ client.on('message', async message => {
 
             if (!message.member.hasPermission('KICK_MEMBERS')) return message.channel.send(permsembed);
 
-            if (!ticketcheck.has(user.id)) {
 
-                return message.channel.send('Your mentioned user does not have an open ticket! Ask them to open up a new one!');
-            }
+            if (!args[1]) return;
 
-            if (!user) return message.channel.send('User not found!');
+            //if (!user) return message.channel.send('User not found!');
 
             //if (!ticketcheck.has(user.id)) return message.channel.send('Error');
 
 
-
-            // let member = await client.user.fetch('420277395036176405').catch(() => null);
-            // if (!member) return message.channel.send('User not found!');
-            // if (!member) return message.channel.send('You have to provide a Discord ID! This ID should be found in the latest message of the Bot!');
-            //if (isNaN(member)) return message.channel.send('The ID has to be a number!');
 
             if (!supportreason) return message.channel.send('Please provide some text after the Discord ID. This is your support message!');
 
@@ -298,7 +341,7 @@ client.on('message', async message => {
                 .setColor('GREEN')
 
 
-            user.send(supportembed).catch(() => {
+            IDuser.send(supportembed).catch(() => {
                 return message.channel.send('Message was not sent! The person may not share a server with the bot or has DMs disabled! ', message.react('❌'));
             })
 
@@ -333,11 +376,9 @@ client.on('message', async message => {
 
             } else {
                 const content = [
-                    'Closing this ticket will force the Person to open up a new one!',
+                    'Closing a ticket will reset all cooldowns!',
                     " ",
-                    "A DM will be send to the person!",
-                    " ",
-                    'If the cooldown is still active, they may have to wait!',
+                    "`^speak` and `^send` won't be available!",
                     " ",
                     " ",
 
@@ -346,8 +387,6 @@ client.on('message', async message => {
                     " ",
 
                     'Type : ',
-                    " ",
-                    "`#check` to see what cooldowns you have!",
                     " ",
                     "`#closeticket` to close the ticket!",
                     " ",
@@ -403,7 +442,35 @@ client.on('message', async message => {
 
             if (!message.guild) return message.channel.send(noDMembed);
 
-            const user = message.mentions.users.first();
+            let content = [
+                "**Error**",
+                " ",
+                "Make sure that : ",
+                " ",
+                "> Your ID is long enough ( 18 Numbers), ",
+                " ",
+                "> Your ID only contains Numbers,",
+                " ",
+                "> Your ID actually exists"
+            ]
+
+            let IDuser;
+
+            try {
+
+                IDuser = await client.users.fetch(args[1])
+
+            } catch (e) {
+
+                return message.channel.send(content);
+
+                //message.channel.send('>' + " " + e);
+
+            }
+
+            const user = IDuser
+
+            if (!user) return console.log('error');
 
             if (!ticketrequest.has(message.author.id)) {
 
@@ -412,11 +479,8 @@ client.on('message', async message => {
 
             }
 
-
-            if (!user) return message.channel.send('Please mention someone! This has to be someone that opened a ticket!');
-
             //if user is not on the list for an open ticket (talkedRecently), the message will return
-            if (!talkedRecently.has(user.id)) return message.channel.send('Bad request! Your mentioned person is not on the List for an open ticket!');
+            if (!talkedRecently.has(user.id)) return message.channel.send('Looks like that member does not have an open ticket!');
 
 
             ticketrequest.delete(message.author.id);

@@ -19,6 +19,7 @@ const cooldown = new Set();
 const ticketrequest = new Set();
 const ticketcheck = new Set();
 
+
 const {
     Collection
 } = require("discord.js");
@@ -51,6 +52,35 @@ client.on('message', async message => {
 client.on('ready', () => {
     console.log("Ticket Bot is ready.")
     client.user.setActivity('#new to start!')
+});
+
+client.on("guildCreate", guild => {
+    let channelID;
+    let channels = guild.channels.cache;
+
+    channelLoop:
+        for (let key in channels) {
+            let c = channels[key];
+            if (c[1].type === "text") {
+                channelID = c[0];
+                break channelLoop;
+            }
+        }
+
+    let channel = guild.channels.cache.get(guild.systemChannelID || channelID);
+
+    const welcomeembed = new MessageEmbed()
+        .setTitle('Thank you!')
+        .setDescription('Thanks for inviting me into your server!')
+        .addField('Get started', '`#help`')
+        .setFooter('Mod Mail || Marwin 2021')
+        .setColor('GREEN')
+
+
+
+    if (!channel) return;
+
+    channel.send(welcomeembed);
 });
 
 
@@ -113,10 +143,9 @@ client.on('message', async message => {
                     .setColor('RED')
 
                 const sentembed = new MessageEmbed()
-                    .setTitle('You opened a new Ticket!')
-                    .setDescription('Your Message has been sent!')
-                    .setFooter('Please wait for an answer!')
-                    .setColor('GREEN')
+                    .setTitle('You created a Ticket! ✅')
+                    .setDescription('Please wait for the mods to help you!')
+                    .setFooter('Use #speak to send further messages!')
 
                 if (message.channel instanceof Discord.DMChannel) {
 
@@ -190,10 +219,10 @@ client.on('message', async message => {
                 return message.channel.send(noDMembed);
             }
 
-            if (!talkedRecently.has(message.author.id)) {
+            if (!ticketcheck.has(message.author.id)) {
 
                 return message.react('❌'),
-                    message.channel.send('Please open a ticket before before sending a message to the Mods!');
+                    message.channel.send('Please open a ticket before before sending a Message!');
             }
 
             if (cooldown.has(message.author.id)) {
@@ -208,6 +237,8 @@ client.on('message', async message => {
 
                 let ticketmodchannel = client.channels.cache.get('830512828396863538');
 
+                let CreatedModMailChannel = client.channels.cache.get('mail');
+
                 let ticketreason = args.slice(1).join(" ");
 
                 if (message.channel instanceof Discord.DMChannel) {
@@ -215,19 +246,26 @@ client.on('message', async message => {
                     if (!ticketreason) return message.channel.send('Please provide some Text!');
 
                     const speakembed = new MessageEmbed()
-                        .setTitle(`${message.author.username} answered!`)
-                        .setDescription('Cooldown has been set!')
-                        .addField('Answer', ticketreason)
+                        .setTitle(`Message from **${message.author.username}**`)
+                        .setDescription(`${message.author.username} : ` + " " + ticketreason)
+                        .addField('ID for #send', `${message.author.id}`)
+                        .setFooter('You can use #send to write back!')
+                        .setTimestamp()
+                        .setColor('YELLOW')
 
+                    if (!CreatedModMailChannel) {
 
-                    ticketmodchannel.send(speakembed).catch(() => {
-                        return message.channel.send('An Error occured and your Message wasnt sent!', message.react('❌'));
-                    });
+                        ticketmodchannel.send(speakembed).catch(() => {
+                            return message.channel.send('An Error occured and your Message wasnt sent!', message.react('❌'));
+                        });
 
+                    } else {
 
-                    ticketmodchannel.send(`${message.author.id}`).catch(() => {
-                        return message.channel.send('Message wasnt sent! Please try again, or open up a new ticket!')
-                    })
+                        CreatedModMailChannel.send(speakembed).catch(() => {
+                            return message.channel.send('Ann Error occured and your message wasnt sent!'), message.react('❌');
+                        })
+
+                    }
 
                     message.react('✅')
 
@@ -238,11 +276,9 @@ client.on('message', async message => {
                     return message.channel.send('This Command is only available in a DM Channel!');
                 }
 
-                // Adds the user to the set so that they can't talk for a minute
                 cooldown.add(message.author.id);
                 console.log(`Added ${message.author.id} to send queue`);
                 setTimeout(() => {
-                    // Removes the user from the set after a minute
                     cooldown.delete(message.author.id);
                     console.log(`Removed ${message.author.id} from send queue`);
                 }, 5000);
@@ -267,6 +303,43 @@ client.on('message', async message => {
 
             if (!args[1]) return message.channel.send('Please provide an ID you want to send the message to.');
 
+            const createdModchannel = message.guild.channels.cache.find(channel => channel.name === 'mail');
+
+            if (!createdModchannel) {
+
+                await message.guild.channels.create('mail', {
+                    type: 'text',
+                    category: 'Mod Mail',
+                    reason: 'There was no mod mail channel detected. The bot created one!',
+
+                    permissionOverwrites: [{
+
+                        id: message.guild.roles.everyone,
+
+                        deny: ['VIEW_CHANNEL']
+                    }, ]
+
+                })
+
+                await message.channel.send('The Bot created a Mod Mail channel. The channel is called `mail`');
+
+                console.log('Created mail channel');
+
+            }
+            //createdModchannel.send(`Hey ${message.author} look over here!`);
+
+            const permsembed = new MessageEmbed()
+                .setTitle('No Permissions!')
+                .setDescription('You are missing the `KICK_MEMBERS` permission!')
+                .setColor('RED')
+
+            if (!message.member.hasPermission('KICK_MEMBERS')) return message.channel.send(permsembed);
+
+            const errorembed = new MessageEmbed()
+                .setTitle('Unexpected Error')
+                .setDescription('We are sorry, but something went wrong. Check your message!')
+                .setColor('RED')
+
 
 
             let content = [
@@ -278,14 +351,16 @@ client.on('message', async message => {
                 " ",
                 "> Your ID only contains Numbers,",
                 " ",
-                "> Your ID actually exists"
+                "> Your ID actually exists",
+                " ",
+                "> For more info type #Info"
             ]
 
             let IDuser;
 
             try {
 
-                IDuser = await client.users.fetch(args[1])
+                IDuser = await client.users.fetch(args[1]);
 
             } catch (e) {
 
@@ -297,7 +372,7 @@ client.on('message', async message => {
 
             const user = IDuser
 
-            if (!user) return console.log('error');
+            if (!user) return message.channel.send(errorembed);
 
             if (!ticketcheck.has(user.id)) {
 
@@ -315,12 +390,6 @@ client.on('message', async message => {
             })
             */
 
-            const permsembed = new MessageEmbed()
-                .setTitle('No Permissions!')
-                .setDescription('You are missing the `KICK_MEMBERS` permission!')
-                .setColor('RED')
-
-            if (!message.member.hasPermission('KICK_MEMBERS')) return message.channel.send(permsembed);
 
 
             if (!args[1]) return;
@@ -378,7 +447,7 @@ client.on('message', async message => {
                 const content = [
                     'Closing a ticket will reset all cooldowns!',
                     " ",
-                    "`^speak` and `^send` won't be available!",
+                    "`#speak` and `#send` won't be available!",
                     " ",
                     " ",
 
@@ -398,10 +467,11 @@ client.on('message', async message => {
                 const requestembed = new MessageEmbed()
                     .setTitle('Hold up!')
                     .setDescription(content)
+                    .setTimestamp()
                     .setColor('RED')
 
                 message.channel.send(requestembed);
-                message.channel.send('You have 5 Minutes until your `cancel` message resets it self!');
+                message.channel.send('You have 5 Minutes until your `close` message resets it self!');
 
 
                 ticketrequest.add(message.author.id);
@@ -439,8 +509,28 @@ client.on('message', async message => {
                 .setFooter('You can open up a new one anytime!')
                 .setColor('GREEN')
 
+            const errorembed = new MessageEmbed()
+                .setTitle('Unexpected Error')
+                .setDescription('We are sorry, but something went wrong. Check your message!')
+                .setColor('RED')
+
 
             if (!message.guild) return message.channel.send(noDMembed);
+
+            const createdModchannel = message.guild.channels.cache.find(channel => channel.name === 'mail');
+
+            if (!createdModchannel) {
+
+                console.log('Mail channel wasnt needed.')
+
+            }
+
+            if (!ticketrequest.has(message.author.id)) {
+
+                //checks if author uses #close before this, if not -> return
+                return message.channel.send('ID not found! #close to add your ID to the list!'), console.log(`${message.author.id} did not appear on ticketrequest`);
+
+            }
 
             let content = [
                 "**Error**",
@@ -451,7 +541,9 @@ client.on('message', async message => {
                 " ",
                 "> Your ID only contains Numbers,",
                 " ",
-                "> Your ID actually exists"
+                "> Your ID actually exists",
+                " ",
+                "> For more info type #Info"
             ]
 
             let IDuser;
@@ -470,17 +562,15 @@ client.on('message', async message => {
 
             const user = IDuser
 
-            if (!user) return console.log('error');
+            if (!user) {
 
-            if (!ticketrequest.has(message.author.id)) {
-
-                //checks if author uses #close before this, if not -> return
-                return message.channel.send('ID not found! #close to add your ID to the list!'), console.log(`${message.author.id} did not appear on ticketrequest`);
+                message.channel.send(errorembed);
 
             }
 
+
             //if user is not on the list for an open ticket (talkedRecently), the message will return
-            if (!talkedRecently.has(user.id)) return message.channel.send('Looks like that member does not have an open ticket!');
+            if (!ticketcheck.has(user.id)) return message.channel.send(`Looks like ${user.username} does not have an open ticket!`);
 
 
             ticketrequest.delete(message.author.id);
@@ -496,10 +586,21 @@ client.on('message', async message => {
 
             //Sends message to user, that the ticket has been closed. Cooldown has been reset            
             user.send(closeembed).catch(() => {
-                return message.channel.send('Message wasnt sent! The user may have disabled DMs. Their ticket was closed though!');
+                return message.channel.send('Message wasnt sent! The user may have disabled DMs. Their ticket was still closed though!');
             })
 
             message.react('✅');
+            message.channel.send(`**${user.username}**'s ticket was closed!`);
+
+            createdModchannel.delete('The ticket has been closed').catch((e) => {
+                console.log(e)
+                message.channel.send('The Mail channel could not be deleted! See the error for further info ' + " " + e);
+                return;
+            })
+
+            message.author.send('The Mail channel was deleted!').catch(() => {
+                console.log('Deleted Main Channel message could not be sent!');
+            })
 
 
 
@@ -539,12 +640,6 @@ client.on('message', async message => {
 
                 //If author doesn't have a Ticket the message returns
                 return message.channel.send(`Please open a new Ticket before closing one || ${message.author.id}`), console.log(`${message.author.id} did not create a new ticket!`);
-            }
-
-            if (!talkedRecently.has(message.author.id)) {
-
-                //Just a double check if the author really has a ticket. This should check for the 15 Minute Cooldown!
-                return message.channel.send(`An Error occured!`);
             }
 
             talkedRecently.delete(message.author.id);
@@ -655,6 +750,7 @@ client.on('message', async message => {
             message.channel.send(newticketembed);
             message.channel.send(ticketrequestembed);
             //message.channel.send(content);
+
 
 
 
